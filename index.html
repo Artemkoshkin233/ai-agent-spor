@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>СПОР С ИИ</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="glow-left"></div>
+<div class="container">
+
+  <!-- ── Шапка ── -->
+  <div class="header">
+    <div class="logo">СПОР&nbsp;<span class="vs">VS</span>&nbsp;ИИ</div>
+    <div class="tagline">Докажи, что ты лучше</div>
+    <div class="rating-bar">
+      <div class="pill">🏆 Рейтинг: <span id="ratingDisplay">1000</span></div>
+      <div class="pill">⚡ Побед: <span id="winsDisplay">0</span></div>
+    </div>
+  </div>
+
+  <!-- ── Блок API-ключа ── -->
+  <div id="apiSetup" style="display:none" class="api-setup">
+    <div class="sec-title">🔑 Нужен API ключ</div>
+    <p>
+      Игра использует Claude AI. Получи <b>бесплатный</b> ключ на
+      <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>
+      → API Keys → Create Key.<br>
+      Ключ сохраняется только в твоём браузере.
+    </p>
+    <div class="api-input-row">
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-...">
+      <button class="btn btn-primary" onclick="saveApiKey()">Сохранить</button>
+    </div>
+    <div id="apiSaved" class="api-saved" style="display:none">✅ Ключ сохранён!</div>
+  </div>
+
+  <!-- ── Экран: меню режимов ── -->
+  <div class="screen active" id="menuScreen">
+    <div class="sec-title">Выбери режим</div>
+    <div class="menu-grid">
+
+      <div class="mode-card classic" onclick="selectMode('classic')">
+        <div class="mode-icon">⚔️</div>
+        <div class="mode-title">Классика</div>
+        <div class="mode-desc">Честный спор на серьёзные темы. 3 раунда.</div>
+      </div>
+
+      <div class="mode-card absurd" onclick="selectMode('absurd')">
+        <div class="mode-icon">🤪</div>
+        <div class="mode-title">Абсурд</div>
+        <div class="mode-desc">Безумные темы. Коты правят миром?</div>
+      </div>
+
+      <div class="mode-card provocateur" onclick="selectMode('provocateur')">
+        <div class="mode-icon">😤</div>
+        <div class="mode-title">Провокатор</div>
+        <div class="mode-desc">ИИ агрессивен. Докажи под давлением.</div>
+      </div>
+
+      <div class="mode-card devil" onclick="selectMode('devil')">
+        <div class="mode-icon">😈</div>
+        <div class="mode-title">Адвокат дьявола</div>
+        <div class="mode-desc">ИИ защищает самую странную позицию.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Экран: выбор темы ── -->
+  <div class="screen" id="topicScreen">
+    <div class="back-row">
+      <button class="btn btn-secondary" onclick="showScreen('menuScreen')">← Назад</button>
+      <div class="sec-title" style="margin:0">
+        Режим: <span id="modeLabel" style="color:var(--accent)"></span>
+      </div>
+    </div>
+
+    <div class="sec-title">Выбери тему</div>
+    <div class="topic-grid" id="topicGrid"></div>
+    <button class="btn-random" onclick="randomTopics()">🎲 Другие темы</button>
+
+    <div class="divider"></div>
+
+    <div class="sec-title">Или введи свою тему</div>
+    <div class="topic-input-row">
+      <input type="text" id="customTopic"
+             placeholder="Нужно ли запретить понедельники?" maxlength="120">
+      <button class="btn btn-primary" onclick="startWithCustom()">Старт</button>
+    </div>
+  </div>
+
+  <!-- ── Экран: игра ── -->
+  <div class="screen" id="gameScreen">
+    <div class="game-header">
+      <div style="flex:1">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">
+          Тема
+        </div>
+        <div class="topic-display" id="gameTopicDisplay"></div>
+      </div>
+      <div>
+        <div style="display:flex;gap:8px;margin-bottom:6px">
+          <span class="pos-badge pos-player">Ты: <span id="playerPosLabel"></span></span>
+          <span class="pos-badge pos-ai">ИИ: <span id="aiPosLabel"></span></span>
+        </div>
+        <div style="font-size:12px;color:var(--muted);text-align:right">
+          Раунд <span id="roundNum">0</span> / 3
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-area" id="chatArea"></div>
+
+    <div id="errorBox" class="error-box" style="display:none"></div>
+
+    <div class="input-area">
+      <textarea id="argInput"
+                placeholder="Напиши свой аргумент..."
+                rows="1"
+                onkeydown="handleKey(event)"
+                oninput="autoResize(this)"></textarea>
+      <button class="btn-send" id="sendBtn" onclick="sendArgument()">➤</button>
+    </div>
+
+    <div class="step-hint" id="inputHint">
+      Напиши аргумент и нажми Enter (Shift+Enter — новая строка)
+    </div>
+  </div>
+
+  <!-- ── Экран: результат ── -->
+  <div class="screen" id="resultScreen">
+    <div class="result-card" id="resultCard">
+      <span class="result-emoji" id="resultEmoji">🏆</span>
+      <div class="result-title"  id="resultTitle">ПОБЕДА!</div>
+      <div class="result-reason" id="resultReason"></div>
+    </div>
+
+    <div class="score-section">
+      <div class="score-row">
+        <span class="score-label" style="color:var(--win)">Ты</span>
+        <div class="score-bar-wrap">
+          <div class="score-bar-fill player" id="playerBar" style="width:0%"></div>
+        </div>
+        <span class="score-num" id="playerScore" style="color:var(--win)">0%</span>
+      </div>
+      <div class="score-row">
+        <span class="score-label" style="color:var(--accent)">ИИ</span>
+        <div class="score-bar-wrap">
+          <div class="score-bar-fill ai" id="aiBar" style="width:0%"></div>
+        </div>
+        <span class="score-num" id="aiScore" style="color:var(--accent)">0%</span>
+      </div>
+    </div>
+
+    <div class="share-area">
+      <button class="btn btn-primary"   onclick="playAgain()">🔄 Играть снова</button>
+      <button class="btn btn-secondary" onclick="copyResult()">📋 Скопировать результат</button>
+    </div>
+  </div>
+
+</div><!-- /.container -->
+
+<script src="game.js"></script>
+</body>
+</html>
